@@ -1,4 +1,4 @@
-# AShareSignalAdvisor（Apallg 投研 V2）
+# Apallg 投研 V2
 
 A 股研究与交易辅助项目。前端采用 Vue 3、Vite 和 ECharts；后端采用 FastAPI，包含行情采集、数据质量检查、因子研究、选股、回测、组合与风险管理等模块。项目仍在持续开发，研究结果和回测表现不构成实盘收益保证。
 
