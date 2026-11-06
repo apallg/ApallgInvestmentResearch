@@ -1,5 +1,8 @@
 <template>
-  <div class="loading">{{ text }}</div>
+  <div class="loading-spinner">
+    <span class="spinner"></span>
+    <span class="loading-text">{{ text }}</span>
+  </div>
 </template>
 <script setup>
 defineProps({

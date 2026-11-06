@@ -1,0 +1,28 @@
+{
+  "factor_set": "oversold_rebound",
+  "saved_at": "2026-08-12T02:48:22.777946",
+  "lgb_best_params": {
+    "num_leaves": 32,
+    "max_depth": 11,
+    "learning_rate": 0.05091635945818555,
+    "reg_alpha": 0.2870875348195467,
+    "reg_lambda": 0.34877126245459306,
+    "min_child_samples": 16,
+    "subsample": 0.6433862914177091,
+    "colsample_bytree": 0.5463476238100519
+  },
+  "xgb_best_params": {
+    "max_depth": 4,
+    "learning_rate": 0.01042772820653866,
+    "n_estimators": 800,
+    "reg_alpha": 0.454554806375592,
+    "reg_lambda": 0.9984677400160641,
+    "subsample": 0.5077649965357206,
+    "colsample_bytree": 0.6972763155595239
+  },
+  "lgb_best_ic": 0.07982265008872952,
+  "xgb_best_ic": 0.08685766611487125,
+  "ic_mean": null,
+  "lgb_weight": 0.478896680224831,
+  "xgb_weight": 0.521103319775169
+}

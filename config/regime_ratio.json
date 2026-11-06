@@ -1,0 +1,16 @@
+{
+  "0": 1.0,
+  "1": 0.25,
+  "2": 0.8,
+  "3": 1.0,
+  "4": 0.25,
+  "5": 0.8,
+  "stops": {
+    "0": {"warn": 4, "full": 8,  "profitHalf": 12, "profitFull": 25},
+    "1": {"warn": 5, "full": 10, "profitHalf": 15, "profitFull": 25},
+    "2": {"warn": 5, "full": 10, "profitHalf": 15, "profitFull": 30},
+    "3": {"warn": 7, "full": 14, "profitHalf": 20, "profitFull": 40},
+    "4": {"warn": 6, "full": 12, "profitHalf": 18, "profitFull": 35},
+    "5": {"warn": 5, "full": 10, "profitHalf": 15, "profitFull": 30}
+  }
+}

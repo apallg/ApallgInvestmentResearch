@@ -1,0 +1,28 @@
+{
+  "factor_set": "volume_breakout",
+  "saved_at": "2026-08-12T03:12:11.693087",
+  "lgb_best_params": {
+    "num_leaves": 231,
+    "max_depth": 8,
+    "learning_rate": 0.023110900626570882,
+    "reg_alpha": 0.5470648126311344,
+    "reg_lambda": 0.09291703974540541,
+    "min_child_samples": 57,
+    "subsample": 0.5470564038882694,
+    "colsample_bytree": 0.5405508118116856
+  },
+  "xgb_best_params": {
+    "max_depth": 7,
+    "learning_rate": 0.033697033296515556,
+    "n_estimators": 1000,
+    "reg_alpha": 0.46514380245551584,
+    "reg_lambda": 0.048096482796064995,
+    "subsample": 0.5001048449218853,
+    "colsample_bytree": 0.5088017347852454
+  },
+  "lgb_best_ic": 0.09827264764517421,
+  "xgb_best_ic": 0.10437368162308219,
+  "ic_mean": null,
+  "lgb_weight": 0.48494659636831705,
+  "xgb_weight": 0.515053403631683
+}

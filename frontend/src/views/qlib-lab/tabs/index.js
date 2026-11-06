@@ -1,0 +1,8 @@
+export { default as BacktestTab } from './BacktestTab.vue'
+export { default as TrainTab } from './TrainTab.vue'
+export { default as TrainedModelsTab } from './TrainedModelsTab.vue'
+export { default as PredictTab } from './PredictTab.vue'
+export { default as TimingTab } from './TimingTab.vue'
+export { default as OptunaTab } from './OptunaTab.vue'
+export { default as RollingTrainTab } from './RollingTrainTab.vue'
+export { default as StrategyProfilesTab } from './StrategyProfilesTab.vue'

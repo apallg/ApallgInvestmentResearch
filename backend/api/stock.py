@@ -1,75 +1,86 @@
 """个股 API"""
+import anyio
 import asyncio
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from core.shared.infrastructure.thread_pool import thread_pool
 from fastapi.responses import StreamingResponse
-from core.data_fetcher import DataFetcher
-from core.analyzer import Analyzer
-from core.realtime import RealtimeEngine
+from backend.api.instrument_identity import require_current_stock_code
+from core.data.fetcher import DataFetcher
+from core.domain.screening.indicators import Analyzer
+from backend.service.market_data import MarketDataService
 
 router = APIRouter()
 fetcher = DataFetcher()
 analyzer = Analyzer()
-rt = RealtimeEngine()
+
+
+@router.get("/search")
+async def search_stocks(q: str = "", limit: int = 10):
+    from backend.service.instrument_lookup import search_instruments
+    return {"data": await anyio.to_thread.run_sync(search_instruments, q, limit)}
 
 
 @router.get("/{code}")
-def get_stock_info(code: str):
+async def get_stock_info(code: str = Depends(require_current_stock_code)):
     """获取股票基本信息"""
-    name = fetcher.get_stock_name(code)
+    name = await anyio.to_thread.run_sync(fetcher.get_stock_name, code)
     return {"code": code, "name": name}
 
 
 @router.get("/{code}/daily")
-def get_stock_daily(code: str):
+async def get_stock_daily(code: str = Depends(require_current_stock_code)):
     """获取日K线"""
     try:
-        df = fetcher.get_stock_daily(code)
+        df = await anyio.to_thread.run_sync(fetcher.get_stock_daily, code)
         if df is None or df.empty:
             return {"data": []}
-        return {"data": df.to_dict(orient="records"), "source": fetcher.get_sources().get("stock_daily", "")}
+        sources = await anyio.to_thread.run_sync(fetcher.get_sources)
+        return {"data": df.to_dict(orient="records"), "source": sources.get("stock_daily", "")}
     except Exception as e:
         raise HTTPException(503, f"获取日K线失败: {e}")
 
 
 @router.get("/{code}/indicators")
-def get_stock_indicators(code: str):
+async def get_stock_indicators(code: str = Depends(require_current_stock_code)):
     """获取技术指标"""
-    try:
+    def _compute():
         df = fetcher.get_stock_daily(code)
         if df is None or df.empty:
-            return {"data": {"indicators": {}, "signals": [], "patterns": []}}
+            return {"indicators": {}, "signals": [], "patterns": []}
         df = analyzer.add_indicators(df)
         ind = analyzer.latest_indicators(df)
         sig = analyzer.detect_cross_signals(df)
         pat = analyzer.detect_kline_patterns(df)
-        return {"data": {"indicators": ind, "signals": sig or [], "patterns": pat or []}}
+        return {"indicators": ind, "signals": sig or [], "patterns": pat or []}
+
+    try:
+        result = await anyio.to_thread.run_sync(_compute)
+        return {"data": result}
     except Exception as e:
         raise HTTPException(503, str(e))
 
 
 @router.get("/{code}/realtime")
-def get_stock_realtime(code: str):
+async def get_stock_realtime(code: str = Depends(require_current_stock_code)):
     """获取实时行情"""
     try:
-        quote = rt.get_realtime_price(code)
-        if not quote:
-            quote = fetcher.get_realtime_quote(code)
-        return {"data": quote or {}}
-    except Exception:
-        return {"data": {}}
+        return await anyio.to_thread.run_sync(MarketDataService.get_live_quotes, [code], "live_display")
+    except Exception as e:
+        return {"data": {}, "meta": {"freshness": "unavailable", "error": str(e)}}
 
 
 @router.get("/{code}/financial")
-def get_stock_financial(code: str):
+async def get_stock_financial(code: str = Depends(require_current_stock_code)):
     """获取财务数据"""
-    return {"data": fetcher.get_stock_financial(code) or {}}
+    data = await anyio.to_thread.run_sync(fetcher.get_stock_financial, code)
+    return {"data": data or {}}
 
 
 @router.get("/{code}/capital-flow")
-def get_capital_flow(code: str):
+async def get_capital_flow(code: str = Depends(require_current_stock_code)):
     """获取资金流向"""
     try:
-        flow = fetcher.get_capital_flow(code)
+        flow = await anyio.to_thread.run_sync(fetcher.get_capital_flow, code)
         if flow is None or (hasattr(flow, 'empty') and flow.empty):
             return {"data": {}}
         if hasattr(flow, 'to_dict'):
@@ -80,12 +91,13 @@ def get_capital_flow(code: str):
 
 
 @router.post("/{code}/analyze")
-def analyze_stock(code: str, mode: str = "single"):
+async def analyze_stock(code: str = Depends(require_current_stock_code), mode: str = "single"):
     """AI 分析 (single/panel) —— 非流式版本"""
-    import config as cfg
+    from core.shared import config as cfg
     if not cfg.DEEPSEEK_API_KEY:
         raise HTTPException(400, "DEEPSEEK_API_KEY 未配置")
-    try:
+
+    def _analyze():
         name = fetcher.get_stock_name(code)
         df = fetcher.get_stock_daily(code)
         financial = fetcher.get_stock_financial(code)
@@ -102,10 +114,13 @@ def analyze_stock(code: str, mode: str = "single"):
         else:
             from agents.base_agent import BaseAgent
             from agents.prompts import SINGLE_ANALYST_PROMPT
-            from utils.cache_manager import CacheManager
+            from core.shared.infrastructure.cache import CacheManager
             agent = BaseAgent("首席分析师", SINGLE_ANALYST_PROMPT, CacheManager())
             analysis = agent.analyze(context)
             return {"data": {"分析报告": analysis}}
+
+    try:
+        return await anyio.to_thread.run_sync(_analyze)
     except HTTPException:
         raise
     except Exception as e:
@@ -132,10 +147,17 @@ def _collect_stream(llm, messages) -> str:
     return buf
 
 
+async def _emit_chunks(text: str, chunk_size: int = 80):
+    """将文本分块流式发送"""
+    for i in range(0, len(text), chunk_size):
+        yield f"data: {text[i:i+chunk_size].replace(chr(10), chr(13))}\n"
+        await asyncio.sleep(0.02)
+
+
 @router.post("/{code}/analyze/stream")
-async def analyze_stock_stream(code: str, mode: str = "single"):
+async def analyze_stock_stream(code: str = Depends(require_current_stock_code), mode: str = "single"):
     """AI 分析 SSE 流式输出"""
-    import config as cfg
+    from core.shared import config as cfg
     if not cfg.DEEPSEEK_API_KEY:
         raise HTTPException(400, "DEEPSEEK_API_KEY 未配置")
     try:
@@ -147,7 +169,7 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
         context = analyzer.get_analysis_context(df, financial)
         context += f"\n\n股票名称: {name}\n股票代码: {code}"
         from agents.prompts import SINGLE_ANALYST_PROMPT
-        from utils.llm_client import LLMClient
+        from core.shared.infrastructure.llm import LLMClient
         llm = LLMClient()
 
         async def generate():
@@ -179,10 +201,10 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
                 async def run_one(title: str, sys_prompt: str):
                     """在线程池中运行单个 Agent，返回 (title, result) 或 (title, None, error)"""
                     try:
-                        result = await asyncio.to_thread(
+                        result = await anyio.to_thread.run_sync(
                             _collect_stream, llm,
                             [{"role": "system", "content": sys_prompt},
-                             {"role": "user", "content": header}]
+                             {"role": "user", "content": header}],
                         )
                         return (title, result, None)
                     except Exception as e:
@@ -199,10 +221,8 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
                     else:
                         reports.append((title, result))
                         yield f"data: [AGENT:{title}]\n"
-                        # 流式推送（小延迟制造打字机效果）
-                        for i in range(0, len(result), 80):
-                            yield f"data: {result[i:i+80]}\n"
-                            await asyncio.sleep(0.02)
+                        async for event in _emit_chunks(result):
+                            yield event
                         yield f"data: [END:{title}]\n\n"
 
                 if len(reports) < 2:
@@ -217,15 +237,14 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
 
                 yield f"data: [STATUS] 风控官正在审查各分析师报告...\n\n"
                 try:
-                    risk_buf = await asyncio.to_thread(
+                    risk_buf = await anyio.to_thread.run_sync(
                         _collect_stream, llm,
                         [{"role": "system", "content": ANALYST_RISK_PROMPT},
-                         {"role": "user", "content": risk_ctx}]
+                         {"role": "user", "content": risk_ctx}],
                     )
                     yield f"data: [AGENT:风控官]\n"
-                    for i in range(0, len(risk_buf), 80):
-                        yield f"data: {risk_buf[i:i+80]}\n"
-                        await asyncio.sleep(0.02)
+                    async for event in _emit_chunks(risk_buf):
+                        yield event
                     yield f"data: [END:风控官]\n\n"
                 except Exception as e:
                     risk_buf = f"风控分析失败: {e}"
@@ -245,7 +264,8 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
                         {"role": "system", "content": MODERATOR_PROMPT},
                         {"role": "user", "content": mod_ctx},
                     ]):
-                        yield f"data: {chunk}\n"
+                        safe = chunk.replace('\n', '\r')
+                        yield f"data: {safe}\n"
                     yield f"data: [END:主持人]\n\n"
                 except Exception as e:
                     yield f"data: [ERROR] 主持人总结失败: {e}\n\n"
@@ -254,10 +274,9 @@ async def analyze_stock_stream(code: str, mode: str = "single"):
                 messages = [{"role": "system", "content": SINGLE_ANALYST_PROMPT},
                            {"role": "user", "content": context}]
                 yield "data: [AGENT:首席分析师]\n"
-                result = await asyncio.to_thread(_collect_stream, llm, messages)
-                for i in range(0, len(result), 80):
-                    yield f"data: {result[i:i+80]}\n"
-                    await asyncio.sleep(0.02)
+                result = await anyio.to_thread.run_sync(_collect_stream, llm, messages)
+                async for event in _emit_chunks(result):
+                    yield event
                 yield "data: [END:首席分析师]\n\n"
             yield "data: [DONE]\n\n"
 

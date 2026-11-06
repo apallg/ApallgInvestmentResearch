@@ -2,8 +2,8 @@
 Agent 基类 - 定义分析师角色的通用接口
 """
 from typing import Optional
-from utils.llm_client import LLMClient
-from utils.cache_manager import CacheManager
+from core.shared.infrastructure.llm import LLMClient
+from core.shared.infrastructure.cache import CacheManager
 
 
 class BaseAgent:

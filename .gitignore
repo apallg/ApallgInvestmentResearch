@@ -1,26 +1,35 @@
-# 环境变量（含密钥，不可提交）
-.env
-CLAUDE.md
-
-# Python
 __pycache__/
-*.py[cod]
-*.egg-info/
-dist/
+*.pyc
+*.pyd
+.pytest_cache/
 .venv/
 venv/
-
-# 前端构建产物
-frontend/dist/
-node_modules/
-
-# IDE
-.vscode/
 .idea/
-
-# 数据缓存
+.vscode/
+.env
+.env.*
+!.env.example
+*.bak
+*.pkl
+*.parquet
+*.log
+*.db
+*.sqlite*
 cache/
-data/
-
-# Docker volumes
-mysql_data/
+.cache/
+logs/
+mlruns/
+output/
+tmp/
+research/
+docs/
+frontend/node_modules/
+frontend/dist/
+data/*
+!data/optuna_params/
+core/shared/data/
+core/domain/data/
+core/domain/backups/
+core/domain/factors/factor_pool_state.json
+.DS_Store
+Thumbs.db

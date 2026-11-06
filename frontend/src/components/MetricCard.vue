@@ -1,9 +1,9 @@
 <template>
   <div class="card metric">
-    <div class="value" :class="colorClass" :style="customColor ? { color: customColor } : {}">{{ displayValue }}</div>
+    <div class="value" :style="valueStyle">{{ displayValue }}</div>
     <div class="label"><slot name="label">{{ label }}</slot></div>
-    <div v-if="delta != null" :class="['delta', delta > 0 ? 'up' : delta < 0 ? 'down' : '']">
-      {{ delta > 0 ? '+' : '' }}{{ delta.toFixed(2) }}%
+    <div :class="['delta', delta != null ? (delta > 0 ? 'up' : delta < 0 ? 'down' : '') : '']">
+      {{ delta != null ? (delta > 0 ? '+' : '') + delta.toFixed(2) + '%' : ' ' }}
     </div>
   </div>
 </template>
@@ -20,9 +20,11 @@ const displayValue = computed(() => {
   if (props.value == null) return '--'
   return props.value
 })
-const colorClass = computed(() => {
-  if (props.color === 'up') return 'text-red'
-  if (props.color === 'down') return 'text-green'
-  return ''
+const valueStyle = computed(() => {
+  const style = {}
+  if (props.customColor) style.color = props.customColor
+  else if (props.color === 'up') style.color = 'var(--up)'
+  else if (props.color === 'down') style.color = 'var(--down)'
+  return style
 })
 </script>

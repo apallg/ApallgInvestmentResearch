@@ -1,7 +1,9 @@
 """大盘数据 API"""
+import anyio
 from fastapi import APIRouter
-from core.data_fetcher import DataFetcher
-from core.realtime import RealtimeEngine
+from core.data.fetcher import DataFetcher
+from core.data.sources.realtime import RealtimeEngine
+from backend.service.market_data import MarketDataService
 
 router = APIRouter()
 fetcher = DataFetcher()
@@ -9,16 +11,17 @@ rt = RealtimeEngine()
 
 
 @router.get("/indices")
-def get_indices():
+async def get_indices():
     """四大指数实时行情"""
-    return {"data": rt.get_indices()}
+    codes = ["sh000001", "sz399001", "sz399006", "sh000688"]
+    return await anyio.to_thread.run_sync(MarketDataService.get_live_quotes, codes, "live_display", "index")
 
 
 @router.get("/index-chart")
-def get_index_chart(index_name: str = "上证指数", days: int = 120):
+async def get_index_chart(index_name: str = "上证指数", days: int = 120):
     """指数历史走势"""
     try:
-        df = fetcher.get_index_daily(index_name, days)
+        df = await anyio.to_thread.run_sync(fetcher.get_index_daily, index_name, days)
         if df is None or df.empty:
             return {"data": []}
         return {"data": df.to_dict(orient="records")}
@@ -27,24 +30,18 @@ def get_index_chart(index_name: str = "上证指数", days: int = 120):
 
 
 @router.get("/top-gainers")
-def top_gainers(n: int = 20):
+async def top_gainers(n: int = 20):
     """涨幅榜"""
-    return {"data": rt.get_top_gainers(n)}
+    return await anyio.to_thread.run_sync(MarketDataService.get_live_ranking, False, n)
 
 
 @router.get("/top-losers")
-def top_losers(n: int = 20):
+async def top_losers(n: int = 20):
     """跌幅榜"""
-    return {"data": rt.get_top_losers(n)}
+    return await anyio.to_thread.run_sync(MarketDataService.get_live_ranking, True, n)
 
 
 @router.get("/sectors")
-def get_sectors():
+async def get_sectors():
     """板块热点"""
-    try:
-        df = fetcher.get_sector_performance()
-        if df is None or df.empty:
-            return {"data": []}
-        return {"data": df.to_dict(orient="records"), "source": fetcher.get_sources().get("sectors", "未知")}
-    except Exception as e:
-        return {"data": [], "error": str(e)}
+    return await anyio.to_thread.run_sync(MarketDataService.get_live_sectors)

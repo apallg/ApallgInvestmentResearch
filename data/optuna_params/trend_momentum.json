@@ -1,0 +1,28 @@
+{
+  "factor_set": "trend_momentum",
+  "saved_at": "2026-08-12T02:02:07.807894",
+  "lgb_best_params": {
+    "num_leaves": 132,
+    "max_depth": 12,
+    "learning_rate": 0.022614568776262313,
+    "reg_alpha": 0.49102685867473345,
+    "reg_lambda": 0.017688544368228466,
+    "min_child_samples": 12,
+    "subsample": 0.618118288239845,
+    "colsample_bytree": 0.5050547016990203
+  },
+  "xgb_best_params": {
+    "max_depth": 8,
+    "learning_rate": 0.03756521332649013,
+    "n_estimators": 700,
+    "reg_alpha": 0.559158742749109,
+    "reg_lambda": 0.29848550182575223,
+    "subsample": 0.8967525500820671,
+    "colsample_bytree": 0.736364397386709
+  },
+  "lgb_best_ic": 0.07260525877591494,
+  "xgb_best_ic": 0.092848456968242,
+  "ic_mean": null,
+  "lgb_weight": 0.43882519319291274,
+  "xgb_weight": 0.5611748068070872
+}

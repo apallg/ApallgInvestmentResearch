@@ -1,0 +1,15 @@
+import api from './index.js'
+
+export const listStrategyProfiles = () => api.get('/strategy-profiles')
+export const getChampionProfile = () => api.get('/strategy-profiles/champion')
+export const getStrategyProfile = (id, version) => api.get(`/strategy-profiles/${id}/${version}`)
+export const createStrategyProfile = body => api.post('/strategy-profiles', body)
+export const validateStrategyProfile = (id, version) => api.post(`/strategy-profiles/${id}/${version}/validate`)
+export const evaluateStrategyProfile = (id, version, backtestJobIds) => api.post(`/strategy-profiles/${id}/${version}/evaluate`, { backtest_job_ids: backtestJobIds })
+export const startPaperProfile = (id, version) => api.post(`/strategy-profiles/${id}/${version}/paper-start`)
+export const recordPaperPeriod = (id, version, body) => api.post(`/strategy-profiles/${id}/${version}/paper-periods`, body)
+export const syncPaperPeriods = (id, version) => api.post(`/strategy-profiles/${id}/${version}/paper-sync`)
+export const activateStrategyProfile = (id, version) => api.post(`/strategy-profiles/${id}/${version}/activate`)
+export const rollbackStrategyProfile = (id, version) => api.post(`/strategy-profiles/${id}/${version}/rollback`)
+export const retireStrategyProfile = (id, version) => api.post(`/strategy-profiles/${id}/${version}/retire`)
+export const createDataSnapshot = body => api.post('/strategy-profiles/data-snapshots', body)
